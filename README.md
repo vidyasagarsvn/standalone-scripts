@@ -4,7 +4,7 @@ A collection of standalone Python scripts for various utility and automation tas
 
 ## Scripts
 
-### [Artifactory Sync Tool](scripts/artifactory_sync_README.md)
+### [Artifactory Sync Tool](artifactory_sync/artifactory_sync_README.md)
 
 Recursively downloads artifacts from a source Artifactory server and uploads them to a destination Artifactory server.
 
@@ -18,7 +18,7 @@ Recursively downloads artifacts from a source Artifactory server and uploads the
 
 **Quick Start:**
 ```bash
-cd scripts
+cd artifactory_sync
 pip install -r artifactory_requirements.txt
 
 # Set credentials
@@ -36,18 +36,18 @@ python artifactory_sync.py \
     --verbose
 ```
 
-See [Artifactory Sync README](scripts/artifactory_sync_README.md) for detailed documentation.
+See [Artifactory Sync README](artifactory_sync/artifactory_sync_README.md) for detailed documentation.
 
 ## Directory Structure
 
 ```
 standalone-scripts/
-├── README.md                          # This file
-├── .gitignore                         # Git ignore file
-└── scripts/                           # Utility scripts
-    ├── artifactory_sync.py            # Main Artifactory sync script
-    ├── artifactory_sync_README.md     # Detailed documentation
-    └── artifactory_requirements.txt   # Python dependencies
+├── README.md                             # This file
+├── .gitignore                            # Git ignore file
+└── artifactory_sync/                     # Artifactory Sync Tool
+    ├── artifactory_sync.py               # Main Artifactory sync script
+    ├── artifactory_sync_README.md        # Detailed documentation
+    └── artifactory_requirements.txt      # Python dependencies
 ```
 
 ## Requirements
