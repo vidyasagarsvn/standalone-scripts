@@ -48,6 +48,9 @@ Homepage = "https://github.com/vidyasagarsvn/standalone-scripts"
 Repository = "https://github.com/vidyasagarsvn/standalone-scripts.git"
 Issues = "https://github.com/vidyasagarsvn/standalone-scripts/issues"
 
+[tool.hatch.build.targets.wheel]
+packages = ["artifactory_sync"]
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]
