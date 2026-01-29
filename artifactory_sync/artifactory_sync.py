@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
-"""
-Artifactory Artifact Sync Tool
+"""Artifactory Artifact Sync Tool.
 
 Downloads artifacts (folders) recursively from a source Artifactory server
 and uploads them to a destination Artifactory server.
 
-Credentials are retrieved from environment variables:
-- SOURCE_ARTIFACTORY_USERNAME
-- SOURCE_ARTIFACTORY_PASSWORD
-- DEST_ARTIFACTORY_USERNAME
-- DEST_ARTIFACTORY_PASSWORD
+Environment Variables
+---------------------
+SOURCE_ARTIFACTORY_USERNAME : str
+    Username for source Artifactory server.
+SOURCE_ARTIFACTORY_PASSWORD : str
+    Password for source Artifactory server.
+DEST_ARTIFACTORY_USERNAME : str
+    Username for destination Artifactory server.
+DEST_ARTIFACTORY_PASSWORD : str
+    Password for destination Artifactory server.
 """
 
 import os
+import shutil
 import sys
 import tempfile
-import shutil
 from pathlib import Path
+
 import click
 import requests
 from requests.auth import HTTPBasicAuth
@@ -26,13 +31,17 @@ class ArtifactoryClient:
     """Client for interacting with Artifactory API."""
     
     def __init__(self, base_url: str, username: str, password: str):
-        """
-        Initialize Artifactory client.
-        
-        Args:
-            base_url: Base URL of Artifactory server (e.g., https://artifactory.example.com/artifactory)
-            username: Artifactory username
-            password: Artifactory password
+        """Initialize Artifactory client.
+
+        Parameters
+        ----------
+        base_url : str
+            Base URL of Artifactory server.
+            Example: https://artifactory.example.com/artifactory
+        username : str
+            Artifactory username.
+        password : str
+            Artifactory password.
         """
         self.base_url = base_url.rstrip('/')
         self.auth = HTTPBasicAuth(username, password)
@@ -41,16 +50,26 @@ class ArtifactoryClient:
         self.timeout = 30  # Request timeout in seconds
     
     def list_artifacts(self, repo: str, path: str = '', verbose: bool = False) -> list[dict]:
-        """
-        List artifacts in a repository path.
-        
-        Args:
-            repo: Repository name
-            path: Path within repository (optional)
-            verbose: Enable verbose logging
-            
-        Returns:
-            List of artifact metadata dictionaries
+        """List artifacts in a repository path.
+
+        Parameters
+        ----------
+        repo : str
+            Repository name.
+        path : str, optional
+            Path within repository. Defaults to root if empty.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        list[dict]
+            List of artifact metadata dictionaries from Artifactory API.
+
+        Raises
+        ------
+        requests.exceptions.RequestException
+            If API request fails.
         """
         path = path.lstrip('/')
         url = f'{self.base_url}/api/repository/{repo}/{path}'
@@ -73,17 +92,23 @@ class ArtifactoryClient:
             raise
     
     def download_file(self, repo: str, artifact_path: str, local_path: Path, verbose: bool = False) -> bool:
-        """
-        Download a single artifact from Artifactory.
-        
-        Args:
-            repo: Repository name
-            artifact_path: Path to artifact in repository
-            local_path: Local path to save file
-            verbose: Enable verbose logging
-            
-        Returns:
-            True if successful, False otherwise
+        """Download a single artifact from Artifactory.
+
+        Parameters
+        ----------
+        repo : str
+            Repository name.
+        artifact_path : str
+            Path to artifact in repository.
+        local_path : Path
+            Local path to save downloaded file.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        bool
+            True if download successful, False otherwise.
         """
         artifact_path = artifact_path.lstrip('/')
         url = f'{self.base_url}/{repo}/{artifact_path}'
@@ -119,18 +144,27 @@ class ArtifactoryClient:
             return False
     
     def upload_file(self, repo: str, artifact_path: str, local_path: Path, dry_run: bool = False, verbose: bool = False) -> bool:
-        """
-        Upload a file to Artifactory.
-        
-        Args:
-            repo: Repository name
-            artifact_path: Target path in repository
-            local_path: Local file path to upload
-            dry_run: If True, simulate upload without actually uploading
-            verbose: Enable verbose logging
-            
-        Returns:
-            True if successful (or would be successful in dry run), False otherwise
+        """Upload a file to Artifactory.
+
+        Parameters
+        ----------
+        repo : str
+            Repository name.
+        artifact_path : str
+            Target path in repository.
+        local_path : Path
+            Local file path to upload.
+        dry_run : bool, optional
+            If True, simulate upload without actually uploading.
+            Default is False.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        bool
+            True if upload successful or would be successful in dry run,
+            False otherwise.
         """
         artifact_path = artifact_path.lstrip('/')
         url = f'{self.base_url}/{repo}/{artifact_path}'
@@ -169,18 +203,32 @@ def download_artifacts_recursively(
     local_dir: Path,
     verbose: bool = False
 ) -> int:
-    """
-    Recursively download artifacts from Artifactory.
-    
-    Args:
-        client: ArtifactoryClient instance
-        repo: Repository name
-        src_path: Source path in repository
-        local_dir: Local directory to save artifacts
-        verbose: Enable verbose output
-        
-    Returns:
-        Number of files downloaded
+    """Recursively download artifacts from Artifactory.
+
+    Parameters
+    ----------
+    client : ArtifactoryClient
+        ArtifactoryClient instance.
+    repo : str
+        Repository name.
+    src_path : str
+        Source path in repository.
+    local_dir : Path
+        Local directory to save artifacts.
+    verbose : bool, optional
+        Enable verbose output. Default is False.
+
+    Returns
+    -------
+    int
+        Number of files successfully downloaded.
+
+    Raises
+    ------
+    requests.exceptions.RequestException
+        If download operation fails.
+    OSError
+        If file system operations fail.
     """
     count = 0
     
@@ -231,19 +279,28 @@ def upload_artifacts_recursively(
     dry_run: bool = False,
     verbose: bool = False
 ) -> int:
-    """
-    Recursively upload artifacts to Artifactory.
-    
-    Args:
-        client: ArtifactoryClient instance
-        repo: Repository name
-        dest_path: Destination path in repository
-        local_dir: Local directory containing artifacts
-        dry_run: If True, simulate uploads without actually uploading
-        verbose: Enable verbose output
-        
-    Returns:
-        Number of files uploaded (or would be uploaded in dry run)
+    """Recursively upload artifacts to Artifactory.
+
+    Parameters
+    ----------
+    client : ArtifactoryClient
+        ArtifactoryClient instance.
+    repo : str
+        Repository name.
+    dest_path : str
+        Destination path in repository.
+    local_dir : Path
+        Local directory containing artifacts.
+    dry_run : bool, optional
+        If True, simulate uploads without actually uploading.
+        Default is False.
+    verbose : bool, optional
+        Enable verbose output. Default is False.
+
+    Returns
+    -------
+    int
+        Number of files uploaded (or would be uploaded in dry run).
     """
     count = 0
     dest_path = dest_path.rstrip('/')
@@ -338,14 +395,17 @@ def sync_artifacts(
     dry_run: bool,
     keep_temp: bool
 ):
-    """
-    Sync artifacts from source Artifactory to destination Artifactory.
-    
-    Credentials are read from environment variables:
-    - SOURCE_ARTIFACTORY_USERNAME
-    - SOURCE_ARTIFACTORY_PASSWORD
-    - DEST_ARTIFACTORY_USERNAME
-    - DEST_ARTIFACTORY_PASSWORD
+    """Sync artifacts from source Artifactory to destination Artifactory.
+
+    Environment variables (required):
+        SOURCE_ARTIFACTORY_USERNAME : str
+            Username for source Artifactory server.
+        SOURCE_ARTIFACTORY_PASSWORD : str
+            Password for source Artifactory server.
+        DEST_ARTIFACTORY_USERNAME : str
+            Username for destination Artifactory server.
+        DEST_ARTIFACTORY_PASSWORD : str
+            Password for destination Artifactory server.
     """
     
     # Validate environment variables
