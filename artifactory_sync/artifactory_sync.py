@@ -238,6 +238,11 @@ def download_artifacts_recursively(
         
         artifacts = client.list_artifacts(repo, src_path, verbose)
         
+        if not artifacts:
+            if verbose:
+                click.echo(f'[RECURSIVE] No artifacts found at: {repo}/{src_path}')
+            return count
+        
         for artifact in artifacts:
             artifact_path = artifact.get('uri', '').lstrip('/')
             
@@ -319,7 +324,13 @@ def upload_artifacts_recursively(
     for idx, local_file in enumerate(files_list, 1):
         # Calculate relative path and target artifact path
         rel_path = local_file.relative_to(local_dir)
-        artifact_path = f'{dest_path}/{rel_path}'.replace('\\', '/')
+        rel_path_str = str(rel_path).replace('\\', '/')
+        
+        # Construct artifact path, handling empty dest_path
+        if dest_path:
+            artifact_path = f'{dest_path}/{rel_path_str}'
+        else:
+            artifact_path = rel_path_str
         
         if verbose:
             click.echo(f'[PROGRESS] [{idx}/{total_files}] Processing: {artifact_path}')
