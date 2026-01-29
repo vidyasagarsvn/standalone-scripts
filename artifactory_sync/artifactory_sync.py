@@ -17,11 +17,9 @@ import sys
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Optional, Dict, List
 import click
 import requests
 from requests.auth import HTTPBasicAuth
-from urllib.parse import urljoin, urlparse
 
 
 class ArtifactoryClient:
@@ -40,14 +38,9 @@ class ArtifactoryClient:
         self.auth = HTTPBasicAuth(username, password)
         self.session = requests.Session()
         self.session.auth = self.auth
+        self.timeout = 30  # Request timeout in seconds
     
-    def _ensure_url_format(self, url: str) -> str:
-        """Ensure URL has proper format."""
-        if not url.startswith(('http://', 'https://')):
-            url = f'https://{url}'
-        return url
-    
-    def list_artifacts(self, repo: str, path: str = '', verbose: bool = False) -> List[Dict]:
+    def list_artifacts(self, repo: str, path: str = '', verbose: bool = False) -> list[dict]:
         """
         List artifacts in a repository path.
         
@@ -66,7 +59,7 @@ class ArtifactoryClient:
             if verbose:
                 click.echo(f'[LIST] Querying repository: {url}')
             
-            response = self.session.get(url, params={'list': '1', 'deep': '1', 'listFolders': '1'})
+            response = self.session.get(url, params={'list': '1', 'deep': '1', 'listFolders': '1'}, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
             results = data.get('results', [])
@@ -99,7 +92,7 @@ class ArtifactoryClient:
             if verbose:
                 click.echo(f'[DOWNLOAD] Fetching from: {url}')
             
-            response = self.session.get(url, stream=True)
+            response = self.session.get(url, stream=True, timeout=self.timeout)
             response.raise_for_status()
             
             # Create parent directories if needed
@@ -156,7 +149,7 @@ class ArtifactoryClient:
                 click.echo(f'[UPLOAD] File size: {file_size} bytes')
             
             with open(local_path, 'rb') as f:
-                response = self.session.put(url, data=f)
+                response = self.session.put(url, data=f, timeout=self.timeout)
             
             response.raise_for_status()
             
@@ -217,8 +210,11 @@ def download_artifacts_recursively(
                     count += 1
                     if verbose:
                         click.echo(f'[SUCCESS] File downloaded: {artifact_path}')
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         click.echo(f'[ERROR] Error during recursive download: {e}', err=True)
+        raise
+    except OSError as e:
+        click.echo(f'[ERROR] File system error during recursive download: {e}', err=True)
         raise
     
     if verbose:
@@ -256,27 +252,27 @@ def upload_artifacts_recursively(
         mode = "DRY-RUN" if dry_run else "UPLOAD"
         click.echo(f'[{mode}] Starting {mode.lower()} to: {repo}/{dest_path}')
     
-    files_list = list(local_dir.rglob('*'))
-    total_files = len([f for f in files_list if f.is_file()])
+    # Collect all files first for accurate progress tracking
+    files_list = [f for f in local_dir.rglob('*') if f.is_file()]
+    total_files = len(files_list)
     
     if verbose:
         click.echo(f'[COUNT] Found {total_files} files to process')
     
-    for idx, local_file in enumerate(local_dir.rglob('*'), 1):
-        if local_file.is_file():
-            # Calculate relative path and target artifact path
-            rel_path = local_file.relative_to(local_dir)
-            artifact_path = f'{dest_path}/{rel_path}'.replace('\\', '/')
-            
-            if verbose:
-                click.echo(f'[PROGRESS] [{idx}/{total_files}] Processing: {artifact_path}')
-            
-            if client.upload_file(repo, artifact_path, local_file, dry_run, verbose):
-                count += 1
-                if verbose and not dry_run:
-                    click.echo(f'[SUCCESS] File uploaded: {artifact_path}')
-                elif verbose and dry_run:
-                    click.echo(f'[DRY-RUN] Would upload: {artifact_path}')
+    for idx, local_file in enumerate(files_list, 1):
+        # Calculate relative path and target artifact path
+        rel_path = local_file.relative_to(local_dir)
+        artifact_path = f'{dest_path}/{rel_path}'.replace('\\', '/')
+        
+        if verbose:
+            click.echo(f'[PROGRESS] [{idx}/{total_files}] Processing: {artifact_path}')
+        
+        if client.upload_file(repo, artifact_path, local_file, dry_run, verbose):
+            count += 1
+            if verbose and not dry_run:
+                click.echo(f'[SUCCESS] File uploaded: {artifact_path}')
+            elif verbose and dry_run:
+                click.echo(f'[DRY-RUN] Would upload: {artifact_path}')
     
     mode = "DRY-RUN" if dry_run else "UPLOAD"
     if verbose:
@@ -444,8 +440,11 @@ def sync_artifacts(
         click.echo('✓ Sync completed successfully')
         click.echo('=' * 60)
     
-    except Exception as e:
+    except (requests.exceptions.RequestException, OSError) as e:
         click.echo(f'[ERROR] {e}', err=True)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        click.echo('\n[ERROR] Operation cancelled by user', err=True)
         sys.exit(1)
 
 
