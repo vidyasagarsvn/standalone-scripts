@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "artifactory-sync"
+version = "1.0.0"
+description = "Recursively sync artifacts between Artifactory servers"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+keywords = ["artifactory", "sync", "artifacts", "download", "upload"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Monitoring",
+]
+
+dependencies = [
+    "click==8.1.7",
+    "requests==2.31.0",
+    "tqdm==4.66.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "isort>=5.12",
+    "pylint>=2.17",
+]
+
+[project.scripts]
+artifactory-sync = "artifactory_sync:sync_artifacts"
+
+[project.urls]
+Homepage = "https://github.com/vidyasagarsvn/standalone-scripts"
+Repository = "https://github.com/vidyasagarsvn/standalone-scripts.git"
+Issues = "https://github.com/vidyasagarsvn/standalone-scripts/issues"
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+py_version = 312
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "too-many-locals",
+]
+
+[tool.pylint.format]
+max-line-length = 100

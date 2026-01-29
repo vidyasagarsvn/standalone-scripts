@@ -55,6 +55,38 @@ standalone-scripts/
 - Python 3.12+
 - Individual scripts may have additional dependencies (see their respective README files)
 
+## Installation & Execution
+
+### Using uv (Recommended for VSCode/WSL)
+
+1. **Install uv** (if not already installed):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Run directly with uv** (no installation needed):
+   ```bash
+   uv run artifactory-sync \
+       --source-url https://source.example.com/artifactory \
+       --source-repo my-repo \
+       --dest-url https://dest.example.com/artifactory \
+       --dest-repo backup-repo \
+       --verbose
+   ```
+
+3. **Or use the run script**:
+   ```bash
+   chmod +x run.sh
+   ./run.sh --help
+   ```
+
+### Using pip (Traditional method)
+
+```bash
+pip install -r artifactory_sync/artifactory_requirements.txt
+python artifactory_sync/artifactory_sync.py --help
+```
+
 ## Contributing
 
 Feel free to add more standalone scripts to this repository. Each script should:

@@ -1,0 +1,8 @@
+# uv configuration for this project
+# This file optimizes uv behavior for development and execution
+
+# Cache directory (optional - uses system default if not set)
+# cache-dir = ".uv-cache"
+
+# Python version to use
+python-preference = "managed"
