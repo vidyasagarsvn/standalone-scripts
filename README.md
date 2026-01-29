@@ -52,7 +52,7 @@ standalone-scripts/
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.12+
 - Individual scripts may have additional dependencies (see their respective README files)
 
 ## Contributing
