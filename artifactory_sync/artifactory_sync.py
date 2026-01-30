@@ -299,7 +299,7 @@ class JFrogCLIClient:
         self.username = username
         self.password = password
     
-    def _run_command(self, command: list, verbose: bool = False) -> tuple[bool, str]:
+    def _run_command(self, command: list, verbose: bool = False, display_command: list = None) -> tuple[bool, str]:
         """Execute a jf CLI command.
 
         Parameters
@@ -308,6 +308,9 @@ class JFrogCLIClient:
             Command and arguments to execute.
         verbose : bool, optional
             Enable verbose logging. Default is False.
+        display_command : list, optional
+            Command to display in verbose output (e.g., without password).
+            If not provided, command is used.
 
         Returns
         -------
@@ -316,7 +319,8 @@ class JFrogCLIClient:
         """
         try:
             if verbose:
-                click.echo(f'[JFROG] Running: {" ".join(command)}')
+                cmd_to_display = display_command if display_command else command
+                click.echo(f'[JFROG] Running: {" ".join(cmd_to_display)}')
             
             result = subprocess.run(
                 command,
@@ -381,7 +385,18 @@ class JFrogCLIClient:
             '--format=json'
         ]
         
-        success, output = self._run_command(command, verbose)
+        display_command = [
+            'jf',
+            'rt',
+            'search',
+            pattern,
+            f'--url={self.base_url}',
+            f'--user={self.username}',
+            '--password=***',
+            '--format=json'
+        ]
+        
+        success, output = self._run_command(command, verbose, display_command)
         if not success:
             raise RuntimeError(f"Failed to list artifacts: {output}")
         
@@ -434,10 +449,21 @@ class JFrogCLIClient:
             f'--password={self.password}'
         ]
         
+        display_command = [
+            'jf',
+            'rt',
+            'download',
+            source_path,
+            str(local_path),
+            f'--url={self.base_url}',
+            f'--user={self.username}',
+            '--password=***'
+        ]
+        
         if verbose:
             click.echo(f'[JFROG] Downloading from: {source_path}')
         
-        success, output = self._run_command(command, verbose)
+        success, output = self._run_command(command, verbose, display_command)
         
         if success:
             if verbose:
@@ -495,7 +521,18 @@ class JFrogCLIClient:
                 f'--password={self.password}'
             ]
             
-            success, output = self._run_command(command, verbose)
+            display_command = [
+                'jf',
+                'rt',
+                'upload',
+                str(local_path),
+                target_path,
+                f'--url={self.base_url}',
+                f'--user={self.username}',
+                '--password=***'
+            ]
+            
+            success, output = self._run_command(command, verbose, display_command)
             
             if success:
                 if verbose:
