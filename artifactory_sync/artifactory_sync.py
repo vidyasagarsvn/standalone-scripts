@@ -4,6 +4,9 @@
 Downloads artifacts (folders) recursively from a source Artifactory server
 and uploads them to a destination Artifactory server.
 
+Can use either the Artifactory REST API or JFrog CLI for operations.
+If using JFrog CLI, ensure it is installed and configured.
+
 Environment Variables
 ---------------------
 SOURCE_ARTIFACTORY_USERNAME : str
@@ -16,8 +19,10 @@ DEST_ARTIFACTORY_PASSWORD : str
     Password for destination Artifactory server.
 """
 
+import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -275,6 +280,257 @@ class ArtifactoryClient:
             return False
 
 
+class JFrogCLIClient:
+    """Client for interacting with Artifactory using JFrog CLI."""
+    
+    def __init__(self, base_url: str, username: str, password: str, server_id: str = None):
+        """Initialize JFrog CLI client.
+
+        Parameters
+        ----------
+        base_url : str
+            Base URL of Artifactory server.
+        username : str
+            Artifactory username.
+        password : str
+            Artifactory password.
+        server_id : str, optional
+            JFrog server ID for CLI configuration. Auto-generated if not provided.
+        """
+        self.base_url = base_url.rstrip('/')
+        self.username = username
+        self.password = password
+        self.server_id = server_id or 'artifactory-sync-' + str(hash(base_url))[-8:]
+        self._configure_server()
+    
+    def _run_command(self, command: list, verbose: bool = False) -> tuple[bool, str]:
+        """Execute a jfrog CLI command.
+
+        Parameters
+        ----------
+        command : list
+            Command and arguments to execute.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        tuple[bool, str]
+            Tuple of (success, output).
+        """
+        try:
+            if verbose:
+                click.echo(f'[JFROG] Running: {" ".join(command)}')
+            
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            
+            if result.returncode == 0:
+                return True, result.stdout
+            else:
+                error_msg = result.stderr or result.stdout
+                if verbose:
+                    click.echo(f'[JFROG] Error: {error_msg}', err=True)
+                return False, error_msg
+        except subprocess.TimeoutExpired:
+            return False, "Command timed out"
+        except Exception as e:
+            return False, str(e)
+    
+    def _configure_server(self):
+        """Configure JFrog CLI server connection."""
+        command = [
+            'jfrog',
+            'config',
+            'add',
+            self.server_id,
+            '--url', self.base_url,
+            '--user', self.username,
+            '--password', self.password,
+            '--interactive=false'
+        ]
+        success, _ = self._run_command(command)
+        if not success:
+            raise RuntimeError(f"Failed to configure JFrog CLI server: {self.server_id}")
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - remove server configuration."""
+        try:
+            subprocess.run(
+                ['jfrog', 'config', 'remove', self.server_id, '--quiet'],
+                capture_output=True,
+                timeout=30
+            )
+        except Exception:
+            pass
+        return False
+    
+    def list_artifacts(self, repo: str, path: str = '', verbose: bool = False) -> list[dict]:
+        """List artifacts in a repository path using jfrog CLI.
+
+        Parameters
+        ----------
+        repo : str
+            Repository name.
+        path : str, optional
+            Path within repository. Defaults to root if empty.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        list[dict]
+            List of artifact metadata.
+
+        Raises
+        ------
+        RuntimeError
+            If command fails.
+        """
+        path = path.lstrip('/')
+        pattern = f'{repo}/*' if not path else f'{repo}/{path}/*'
+        
+        command = [
+            'jfrog',
+            'rt',
+            'search',
+            pattern,
+            f'--server-id={self.server_id}',
+            '--format=json'
+        ]
+        
+        success, output = self._run_command(command, verbose)
+        if not success:
+            raise RuntimeError(f"Failed to list artifacts: {output}")
+        
+        try:
+            data = json.loads(output)
+            results = data.get('results', [])
+            
+            if verbose:
+                click.echo(f'[JFROG] Found {len(results)} items')
+            
+            return results
+        except json.JSONDecodeError:
+            if verbose:
+                click.echo(f'[JFROG] No artifacts found or empty result')
+            return []
+    
+    def download_file(self, repo: str, artifact_path: str, local_path: Path, verbose: bool = False) -> bool:
+        """Download a single artifact using jfrog CLI.
+
+        Parameters
+        ----------
+        repo : str
+            Repository name.
+        artifact_path : str
+            Path to artifact in repository.
+        local_path : Path
+            Local path to save downloaded file.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        bool
+            True if download successful, False otherwise.
+        """
+        artifact_path = artifact_path.lstrip('/')
+        source_path = f'{repo}/{artifact_path}'
+        
+        # Create parent directories if needed
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        command = [
+            'jfrog',
+            'rt',
+            'download',
+            source_path,
+            str(local_path),
+            f'--server-id={self.server_id}'
+        ]
+        
+        if verbose:
+            click.echo(f'[JFROG] Downloading from: {source_path}')
+        
+        success, output = self._run_command(command, verbose)
+        
+        if success:
+            if verbose:
+                click.echo(f'[JFROG] Successfully saved to: {local_path}')
+            return True
+        else:
+            click.echo(f'[ERROR] Error downloading {artifact_path}: {output}', err=True)
+            return False
+    
+    def upload_file(self, repo: str, artifact_path: str, local_path: Path, dry_run: bool = False, verbose: bool = False) -> bool:
+        """Upload a file using jfrog CLI.
+
+        Parameters
+        ----------
+        repo : str
+            Repository name.
+        artifact_path : str
+            Target path in repository.
+        local_path : Path
+            Local file path to upload.
+        dry_run : bool, optional
+            If True, simulate upload without actually uploading. Default is False.
+        verbose : bool, optional
+            Enable verbose logging. Default is False.
+
+        Returns
+        -------
+        bool
+            True if upload successful or would be successful in dry run, False otherwise.
+        """
+        artifact_path = artifact_path.lstrip('/')
+        target_path = f'{repo}/{artifact_path}'
+        
+        try:
+            file_size = local_path.stat().st_size
+            
+            if dry_run:
+                click.echo(f'[DRY-RUN] Would upload to: {target_path} ({file_size} bytes)')
+                if verbose:
+                    click.echo(f'[DRY-RUN] Source file: {local_path}')
+                return True
+            
+            if verbose:
+                click.echo(f'[JFROG] Uploading to: {target_path}')
+                click.echo(f'[JFROG] File size: {file_size} bytes')
+            
+            command = [
+                'jfrog',
+                'rt',
+                'upload',
+                str(local_path),
+                target_path,
+                f'--server-id={self.server_id}'
+            ]
+            
+            success, output = self._run_command(command, verbose)
+            
+            if success:
+                if verbose:
+                    click.echo(f'[JFROG] Successfully uploaded: {artifact_path}')
+                return True
+            else:
+                click.echo(f'[ERROR] Error uploading {artifact_path}: {output}', err=True)
+                return False
+        except OSError as e:
+            click.echo(f'[ERROR] Error uploading {artifact_path}: {e}', err=True)
+            return False
+
+
 def download_artifacts_recursively(
     client: ArtifactoryClient,
     repo: str,
@@ -497,6 +753,11 @@ def upload_artifacts_recursively(
     is_flag=True,
     help='Validate connectivity to both Artifactory servers before syncing'
 )
+@click.option(
+    '--use-jfrog-cli',
+    is_flag=True,
+    help='Use JFrog CLI for Artifactory operations instead of REST API'
+)
 def sync_artifacts(
     source_url: str,
     source_repo: str,
@@ -508,7 +769,8 @@ def sync_artifacts(
     dry_run: bool,
     keep_temp: bool,
     overwrite: bool,
-    validate: bool
+    validate: bool,
+    use_jfrog_cli: bool
 ):
     """Sync artifacts from source Artifactory to destination Artifactory.
 
@@ -551,16 +813,25 @@ def sync_artifacts(
         click.echo('Artifactory Sync Tool')
         click.echo('=' * 60)
         
+        client_type = 'JFrog CLI' if use_jfrog_cli else 'REST API'
         if verbose:
+            click.echo(f'[CONFIG] Client type: {client_type}')
             click.echo(f'[CONFIG] Source: {source_url}/{source_repo}/{source_path}')
             click.echo(f'[CONFIG] Destination: {dest_url}/{dest_repo}/{dest_path}')
             click.echo(f'[CONFIG] Dry Run: {dry_run}')
             click.echo(f'[CONFIG] Overwrite: {overwrite}')
         
-        click.echo('Initializing Artifactory clients...')
+        click.echo(f'Initializing Artifactory clients ({client_type})...')
         
-        with ArtifactoryClient(source_url, source_username, source_password) as source_client, \
-             ArtifactoryClient(dest_url, dest_username, dest_password) as dest_client:
+        # Create appropriate client type
+        if use_jfrog_cli:
+            source_client_obj = JFrogCLIClient(source_url, source_username, source_password)
+            dest_client_obj = JFrogCLIClient(dest_url, dest_username, dest_password)
+        else:
+            source_client_obj = ArtifactoryClient(source_url, source_username, source_password)
+            dest_client_obj = ArtifactoryClient(dest_url, dest_username, dest_password)
+        
+        with source_client_obj as source_client, dest_client_obj as dest_client:
             
             if verbose:
                 click.echo('[CLIENT] Source client initialized')
