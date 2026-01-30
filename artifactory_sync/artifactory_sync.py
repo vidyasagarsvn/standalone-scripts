@@ -144,7 +144,9 @@ class ArtifactoryClient:
             If API request fails.
         """
         path = path.lstrip('/')
-        url = f'{self.base_url}/api/repository/{repo}/{path}'
+        url = f'{self.base_url}/api/repository/{repo}'
+        if path:
+            url = f'{url}/{path}'
         
         try:
             if verbose:
@@ -187,7 +189,9 @@ class ArtifactoryClient:
             True if download successful, False otherwise.
         """
         artifact_path = artifact_path.lstrip('/')
-        url = f'{self.base_url}/{repo}/{artifact_path}'
+        url = f'{self.base_url}/{repo}'
+        if artifact_path:
+            url = f'{url}/{artifact_path}'
         
         try:
             if verbose:
@@ -242,7 +246,9 @@ class ArtifactoryClient:
             False otherwise.
         """
         artifact_path = artifact_path.lstrip('/')
-        url = f'{self.base_url}/{repo}/{artifact_path}'
+        url = f'{self.base_url}/{repo}'
+        if artifact_path:
+            url = f'{url}/{artifact_path}'
         
         try:
             if dry_run:
