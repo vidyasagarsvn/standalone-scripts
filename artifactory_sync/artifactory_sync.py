@@ -283,7 +283,7 @@ class ArtifactoryClient:
 class JFrogCLIClient:
     """Client for interacting with Artifactory using JFrog CLI."""
     
-    def __init__(self, base_url: str, username: str, password: str, server_id: str = None):
+    def __init__(self, base_url: str, username: str, password: str):
         """Initialize JFrog CLI client.
 
         Parameters
@@ -294,17 +294,13 @@ class JFrogCLIClient:
             Artifactory username.
         password : str
             Artifactory password.
-        server_id : str, optional
-            JFrog server ID for CLI configuration. Auto-generated if not provided.
         """
         self.base_url = base_url.rstrip('/')
         self.username = username
         self.password = password
-        self.server_id = server_id or 'artifactory-sync-' + str(hash(base_url))[-8:]
-        self._configure_server()
     
     def _run_command(self, command: list, verbose: bool = False) -> tuple[bool, str]:
-        """Execute a jfrog CLI command.
+        """Execute a jf CLI command.
 
         Parameters
         ----------
@@ -341,36 +337,12 @@ class JFrogCLIClient:
         except Exception as e:
             return False, str(e)
     
-    def _configure_server(self):
-        """Configure JFrog CLI server connection."""
-        command = [
-            'jfrog',
-            'config',
-            'add',
-            self.server_id,
-            '--url', self.base_url,
-            '--user', self.username,
-            '--password', self.password,
-            '--interactive=false'
-        ]
-        success, _ = self._run_command(command)
-        if not success:
-            raise RuntimeError(f"Failed to configure JFrog CLI server: {self.server_id}")
-    
     def __enter__(self):
         """Context manager entry."""
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit - remove server configuration."""
-        try:
-            subprocess.run(
-                ['jfrog', 'config', 'remove', self.server_id, '--quiet'],
-                capture_output=True,
-                timeout=30
-            )
-        except Exception:
-            pass
+        """Context manager exit."""
         return False
     
     def list_artifacts(self, repo: str, path: str = '', verbose: bool = False) -> list[dict]:
@@ -399,11 +371,13 @@ class JFrogCLIClient:
         pattern = f'{repo}/*' if not path else f'{repo}/{path}/*'
         
         command = [
-            'jfrog',
+            'jf',
             'rt',
             'search',
             pattern,
-            f'--server-id={self.server_id}',
+            f'--url={self.base_url}',
+            f'--user={self.username}',
+            f'--password={self.password}',
             '--format=json'
         ]
         
@@ -450,12 +424,14 @@ class JFrogCLIClient:
         local_path.parent.mkdir(parents=True, exist_ok=True)
         
         command = [
-            'jfrog',
+            'jf',
             'rt',
             'download',
             source_path,
             str(local_path),
-            f'--server-id={self.server_id}'
+            f'--url={self.base_url}',
+            f'--user={self.username}',
+            f'--password={self.password}'
         ]
         
         if verbose:
@@ -509,12 +485,14 @@ class JFrogCLIClient:
                 click.echo(f'[JFROG] File size: {file_size} bytes')
             
             command = [
-                'jfrog',
+                'jf',
                 'rt',
                 'upload',
                 str(local_path),
                 target_path,
-                f'--server-id={self.server_id}'
+                f'--url={self.base_url}',
+                f'--user={self.username}',
+                f'--password={self.password}'
             ]
             
             success, output = self._run_command(command, verbose)
