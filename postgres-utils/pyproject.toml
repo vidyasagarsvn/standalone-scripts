@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "postgres-utils"
+version = "1.0.0"
+description = "Load data from PostgreSQL into Apache Spark DataFrames using JDBC"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+keywords = ["postgresql", "spark", "jdbc", "data-loading", "etl"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Data Scientists",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Database",
+]
+
+dependencies = [
+    "pyspark>=3.5.0",
+    "pytest>=7.0.0",
+]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--maxfail=2 --disable-warnings"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/postgres-utils"
+Repository = "https://github.com/yourusername/postgres-utils.git"
+Documentation = "https://github.com/yourusername/postgres-utils#readme"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/postgres_utils"]
