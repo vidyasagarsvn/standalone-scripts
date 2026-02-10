@@ -96,10 +96,12 @@ class PostgresClient:
 
     Attributes
     ----------
-    _pool : SimpleConnectionPool
-        Connection pool managed internally.
-    _connected : bool
-        Flag indicating if connection pool has been established.
+    config : PostgresConfig
+        PostgreSQL connection configuration.
+    min_connections : int
+        Minimum number of connections to maintain in the pool.
+    max_connections : int
+        Maximum number of connections allowed in the pool.
 
     Examples
     --------
