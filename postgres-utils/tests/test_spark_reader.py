@@ -1,7 +1,10 @@
 import os
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from postgres_utils.connection import PostgresConfig, PostgresSparkReader
+
 
 @pytest.fixture
 def config():
@@ -9,11 +12,13 @@ def config():
     os.environ["POSTGRES_PASSWORD"] = "password"
     return PostgresConfig(host="localhost", database="testdb", port=5432)
 
+
 def test_spark_reader_init(config):
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
     assert reader.spark is spark
     assert reader.config is config
+
 
 def test_spark_reader_read_table_calls_jdbc(config):
     spark = MagicMock()
@@ -23,6 +28,7 @@ def test_spark_reader_read_table_calls_jdbc(config):
     assert df == "mock_df"
     reader.spark.read.jdbc.assert_called_once()
 
+
 def test_spark_reader_read_sql_calls_jdbc(config):
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
@@ -30,6 +36,7 @@ def test_spark_reader_read_sql_calls_jdbc(config):
     df = reader.read_sql("SELECT * FROM users")
     assert df == "mock_df"
     reader.spark.read.jdbc.assert_called_once()
+
 
 def test_spark_reader_read_partitioned_calls_jdbc(config):
     spark = MagicMock()
@@ -44,6 +51,7 @@ def test_spark_reader_read_partitioned_calls_jdbc(config):
     )
     assert df == "mock_df"
     reader.spark.read.jdbc.assert_called_once()
+
 
 def test_spark_reader_schema_returns_schema(config):
     spark = MagicMock()

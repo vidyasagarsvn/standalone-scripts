@@ -1,12 +1,16 @@
 import os
+
 import pytest
-from postgres_utils.connection import PostgresConfig, PostgresClient
+
+from postgres_utils.connection import PostgresClient, PostgresConfig
+
 
 @pytest.fixture
 def config():
     os.environ["POSTGRES_USER"] = "postgres"
     os.environ["POSTGRES_PASSWORD"] = "password"
     return PostgresConfig(host="localhost", database="testdb", port=5432)
+
 
 def test_postgres_config_env(monkeypatch):
     monkeypatch.setenv("POSTGRES_USER", "envuser")
@@ -18,11 +22,13 @@ def test_postgres_config_env(monkeypatch):
     assert "localhost" in cfg.jdbc_url
     assert cfg.psycopg2_dsn.startswith("postgresql://")
 
+
 def test_postgres_config_missing_user(monkeypatch):
     monkeypatch.delenv("POSTGRES_USER", raising=False)
     monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
     with pytest.raises(ValueError):
         PostgresConfig(host="localhost", database="testdb")
+
 
 def test_postgres_client_connect_disconnect(config):
     client = PostgresClient(config)
@@ -31,6 +37,7 @@ def test_postgres_client_connect_disconnect(config):
     # Don't actually connect to DB in unit test
     # client.connect()  # Would raise if DB is not available
     # client.disconnect()  # Should be safe to call
+
 
 def test_postgres_client_context_manager(config):
     client = PostgresClient(config)

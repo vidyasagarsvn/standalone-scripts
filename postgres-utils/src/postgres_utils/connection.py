@@ -7,15 +7,8 @@ from typing import Any, Generator, Optional
 import psycopg2
 from psycopg2 import extras
 from psycopg2.pool import SimpleConnectionPool
-
-try:
-    from pyspark.sql import DataFrame, SparkSession
-    HAS_PYSPARK = True
-except ImportError:
-    HAS_PYSPARK = False
-    DataFrame = None
-    SparkSession = None
-
+from py4j.protocol import Py4JJavaError
+from pyspark.sql import DataFrame, SparkSession
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +57,9 @@ class PostgresConfig:
         self.password = self.password or os.getenv("POSTGRES_PASSWORD")
 
         if not self.user:
-            raise ValueError(
-                "user must be provided or POSTGRES_USER environment variable must be set"
-            )
+            raise ValueError("user must be provided or POSTGRES_USER environment variable must be set")
         if not self.password:
-            raise ValueError(
-                "password must be provided or POSTGRES_PASSWORD environment variable must be set"
-            )
+            raise ValueError("password must be provided or POSTGRES_PASSWORD environment variable must be set")
 
     @property
     def jdbc_url(self) -> str:
@@ -367,7 +356,7 @@ class PostgresClient:
             cur.execute(query, params)
             return cur.fetchall()
 
-    def __enter__(self) -> 'PostgresClient':
+    def __enter__(self) -> "PostgresClient":
         """Context manager entry."""
         self.connect()
         return self
@@ -461,7 +450,6 @@ class PostgresSparkReader:
         ...     upperBound=1000
         ... )
         """
-        from py4j.protocol import Py4JJavaError
         try:
             df = self.spark.read.jdbc(
                 url=self.config.jdbc_url,
@@ -505,7 +493,6 @@ class PostgresSparkReader:
         ...     numPartitions=8
         ... )
         """
-        from py4j.protocol import Py4JJavaError
         try:
             wrapped_query = f"({query}) AS subquery"
             df = self.spark.read.jdbc(
@@ -526,8 +513,8 @@ class PostgresSparkReader:
         table: str,
         partition_column: str,
         num_partitions: int = 4,
-        lower_bound: Optional[int] = None,
-        upper_bound: Optional[int] = None,
+        lower_bound: int | None = None,
+        upper_bound: int | None = None,
         **options: Any,
     ) -> DataFrame:
         """
@@ -568,7 +555,6 @@ class PostgresSparkReader:
         ...     upper_bound=10000
         ... )
         """
-        from py4j.protocol import Py4JJavaError
         try:
             partition_options = {
                 "numPartitions": num_partitions,
@@ -619,7 +605,6 @@ class PostgresSparkReader:
         >>> schema = loader.schema("users")
         >>> print(schema)
         """
-        from py4j.protocol import Py4JJavaError
         try:
             df = self.read_table(table, numPartitions=1)
             logger.info(f"Retrieved schema for table '{table}'")
