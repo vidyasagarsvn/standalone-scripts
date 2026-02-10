@@ -13,7 +13,7 @@ def config() -> PostgresConfig:
     return PostgresConfig(host="localhost", database="testdb", port=5432)
 
 
-def test_postgres_config_env(monkeypatch):
+def test_postgres_config_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test PostgresConfig reads credentials from environment variables."""
     monkeypatch.setenv("POSTGRES_USER", "envuser")
     monkeypatch.setenv("POSTGRES_PASSWORD", "envpass")
@@ -25,7 +25,7 @@ def test_postgres_config_env(monkeypatch):
     assert cfg.psycopg2_dsn.startswith("postgresql://")
 
 
-def test_postgres_config_missing_user(monkeypatch):
+def test_postgres_config_missing_user(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test PostgresConfig raises ValueError if user/password missing."""
     monkeypatch.delenv("POSTGRES_USER", raising=False)
     monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
@@ -33,7 +33,7 @@ def test_postgres_config_missing_user(monkeypatch):
         PostgresConfig(host="localhost", database="testdb")
 
 
-def test_postgres_client_connect_disconnect(config):
+def test_postgres_client_connect_disconnect(config: PostgresConfig) -> None:
     """Test PostgresClient connect/disconnect logic without real DB."""
     client = PostgresClient(config)
     # Should not raise, even if DB is not running (will raise on connect)
@@ -43,7 +43,7 @@ def test_postgres_client_connect_disconnect(config):
     # client.disconnect()  # Should be safe to call
 
 
-def test_postgres_client_context_manager(config):
+def test_postgres_client_context_manager(config: PostgresConfig) -> None:
     """Test PostgresClient context manager entry/exit without real DB."""
     client = PostgresClient(config)
     # Should be able to enter/exit context without DB

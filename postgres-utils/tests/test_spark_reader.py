@@ -14,7 +14,7 @@ def config() -> PostgresConfig:
     return PostgresConfig(host="localhost", database="testdb", port=5432)
 
 
-def test_spark_reader_init(config):
+def test_spark_reader_init(config: PostgresConfig) -> None:
     """Test initialization of PostgresSparkReader."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
@@ -22,7 +22,7 @@ def test_spark_reader_init(config):
     assert reader.config is config
 
 
-def test_spark_reader_read_table_calls_jdbc(config):
+def test_spark_reader_read_table_calls_jdbc(config: PostgresConfig) -> None:
     """Test read_table calls Spark JDBC and returns DataFrame."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
@@ -32,7 +32,7 @@ def test_spark_reader_read_table_calls_jdbc(config):
     reader.spark.read.jdbc.assert_called_once()
 
 
-def test_spark_reader_read_sql_calls_jdbc(config):
+def test_spark_reader_read_sql_calls_jdbc(config: PostgresConfig) -> None:
     """Test read_sql calls Spark JDBC and returns DataFrame."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
@@ -42,7 +42,7 @@ def test_spark_reader_read_sql_calls_jdbc(config):
     reader.spark.read.jdbc.assert_called_once()
 
 
-def test_spark_reader_read_partitioned_calls_jdbc(config):
+def test_spark_reader_read_partitioned_calls_jdbc(config: PostgresConfig) -> None:
     """Test read_partitioned calls Spark JDBC and returns DataFrame."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
@@ -58,7 +58,7 @@ def test_spark_reader_read_partitioned_calls_jdbc(config):
     reader.spark.read.jdbc.assert_called_once()
 
 
-def test_spark_reader_schema_returns_schema(config):
+def test_spark_reader_schema_returns_schema(config: PostgresConfig) -> None:
     """Test schema method returns DataFrame schema."""
     spark = MagicMock()
     mock_df = MagicMock()
