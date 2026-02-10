@@ -212,7 +212,7 @@ class PostgresClient:
     @contextmanager
     def cursor(
         self,
-        dict_cursor: bool = False,
+        return_dict: bool = False,
     ) -> Generator[psycopg2.extensions.cursor, None, None]:
         """
         Context manager for database cursor operations.
@@ -250,7 +250,7 @@ class PostgresClient:
         connection = self._pool.getconn()
         cursor = None
         try:
-            if dict_cursor:
+            if return_dict:
                 cursor = connection.cursor(cursor_factory=extras.RealDictCursor)
             else:
                 cursor = connection.cursor()
