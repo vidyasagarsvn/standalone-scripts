@@ -7,13 +7,15 @@ from postgres_utils.connection import PostgresConfig, PostgresSparkReader
 
 
 @pytest.fixture
-def config():
+def config() -> PostgresConfig:
+    """Fixture for PostgresConfig with environment variables set."""
     os.environ["POSTGRES_USER"] = "postgres"
     os.environ["POSTGRES_PASSWORD"] = "password"
     return PostgresConfig(host="localhost", database="testdb", port=5432)
 
 
 def test_spark_reader_init(config):
+    """Test initialization of PostgresSparkReader."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
     assert reader.spark is spark
@@ -21,6 +23,7 @@ def test_spark_reader_init(config):
 
 
 def test_spark_reader_read_table_calls_jdbc(config):
+    """Test read_table calls Spark JDBC and returns DataFrame."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
     reader.spark.read.jdbc.return_value = "mock_df"
@@ -30,6 +33,7 @@ def test_spark_reader_read_table_calls_jdbc(config):
 
 
 def test_spark_reader_read_sql_calls_jdbc(config):
+    """Test read_sql calls Spark JDBC and returns DataFrame."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
     reader.spark.read.jdbc.return_value = "mock_df"
@@ -39,6 +43,7 @@ def test_spark_reader_read_sql_calls_jdbc(config):
 
 
 def test_spark_reader_read_partitioned_calls_jdbc(config):
+    """Test read_partitioned calls Spark JDBC and returns DataFrame."""
     spark = MagicMock()
     reader = PostgresSparkReader(spark, config)
     reader.spark.read.jdbc.return_value = "mock_df"
@@ -54,6 +59,7 @@ def test_spark_reader_read_partitioned_calls_jdbc(config):
 
 
 def test_spark_reader_schema_returns_schema(config):
+    """Test schema method returns DataFrame schema."""
     spark = MagicMock()
     mock_df = MagicMock()
     mock_df.schema = "mock_schema"

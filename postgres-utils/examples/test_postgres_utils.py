@@ -1,3 +1,4 @@
+
 """
 Example script to test PostgresClient and PostgresSparkLoader from postgres_utils.
 This is not a unit test, but a demonstration of usage.
@@ -6,14 +7,18 @@ This is not a unit test, but a demonstration of usage.
 import logging
 import os
 
+from pyspark.sql import SparkSession
+
 from postgres_utils import PostgresClient, PostgresConfig, PostgresSparkLoader
 
 
-def setup_logging():
+def setup_logging() -> None:
+    """Configure logging for the example script."""
     logging.basicConfig(level=logging.INFO)
 
 
-def get_config():
+def get_config() -> PostgresConfig:
+    """Create and return a PostgresConfig for demonstration purposes."""
     # Set environment variables or replace with your credentials
     os.environ.setdefault("POSTGRES_USER", "postgres")
     os.environ.setdefault("POSTGRES_PASSWORD", "password")
@@ -24,7 +29,8 @@ def get_config():
     )
 
 
-def test_postgres_client(config):
+def test_postgres_client(config: PostgresConfig) -> None:
+    """Demonstrate usage of PostgresClient and print PostgreSQL version."""
     print("\n=== Testing PostgresClient ===")
     try:
         with PostgresClient(config) as db:
@@ -34,11 +40,10 @@ def test_postgres_client(config):
         print(f"PostgresClient error: {e}")
 
 
-def test_postgres_spark_loader(config):
+def test_postgres_spark_loader(config: PostgresConfig) -> None:
+    """Demonstrate usage of PostgresSparkLoader and print DataFrame info."""
     print("\n=== Testing PostgresSparkLoader ===")
     try:
-        from pyspark.sql import SparkSession
-
         spark = SparkSession.builder.appName("postgres_utils_example").getOrCreate()
         loader = PostgresSparkLoader(spark, config)
         # Try to read a table (replace 'users' with a real table in your DB)
@@ -49,7 +54,8 @@ def test_postgres_spark_loader(config):
         print(f"PostgresSparkLoader error: {e}")
 
 
-def main():
+def main() -> None:
+    """Run all example tests for Postgres utilities."""
     setup_logging()
     config = get_config()
     test_postgres_client(config)
