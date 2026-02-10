@@ -18,18 +18,30 @@ class PostgresConfig:
     """
     PostgreSQL connection configuration.
 
-    Parameters
+
+
+    Attributes
     ----------
     host : str
         The hostname or IP address of the PostgreSQL server.
     database : str
         The name of the database to connect to.
-    user : str, optional
-        The username for authentication. If not provided, reads from POSTGRES_USER environment variable.
-    password : str, optional
-        The password for authentication. If not provided, reads from POSTGRES_PASSWORD environment variable.
-    port : int, optional
-        The port number of the PostgreSQL server. Default is 5432.
+    user : str
+        The username for authentication.
+    password : str
+        The password for authentication.
+    port : int
+        The port number of the PostgreSQL server.
+
+
+    Methods
+    -------
+    jdbc_url
+        Generate JDBC URL for PostgreSQL connection.
+    jdbc_properties
+        Generate JDBC connection properties.
+    psycopg2_dsn
+        Generate psycopg2 DSN (Data Source Name) for connections.
 
     Raises
     ------
@@ -45,7 +57,17 @@ class PostgresConfig:
     port: int = 5432
 
     def __post_init__(self) -> None:
-        """Validate and resolve credentials from environment variables if needed."""
+        """Validate and resolve credentials from environment variables if needed.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If validation fails for host, database, port, or credentials.
+        """
         if not self.host or not isinstance(self.host, str):
             raise ValueError("host must be a non-empty string")
         if not self.database or not isinstance(self.database, str):
@@ -85,14 +107,7 @@ class PostgresClient:
     execute queries, and manage connections with automatic pooling and error handling.
     Connections are lazy-loaded on first use.
 
-    Parameters
-    ----------
-    config : PostgresConfig
-        PostgreSQL connection configuration.
-    min_connections : int, optional
-        Minimum number of connections to maintain in the pool. Default is 1.
-    max_connections : int, optional
-        Maximum number of connections allowed in the pool. Default is 10.
+
 
     Attributes
     ----------
@@ -102,6 +117,26 @@ class PostgresClient:
         Minimum number of connections to maintain in the pool.
     max_connections : int
         Maximum number of connections allowed in the pool.
+    _pool : SimpleConnectionPool or None
+        The underlying psycopg2 connection pool.
+    _connected : bool
+        Whether the client is currently connected.
+
+
+    Methods
+    -------
+    connect
+        Establish a connection pool to the PostgreSQL database.
+    disconnect
+        Close all connections in the pool.
+    cursor
+        Context manager for database cursor operations.
+    execute
+        Execute a read-only query and return results.
+    execute_single
+        Execute a read-only query and return the first result.
+    execute_dict
+        Execute a read-only query and return results as dictionaries.
 
     Examples
     --------
@@ -212,7 +247,7 @@ class PostgresClient:
 
         Parameters
         ----------
-        dict_cursor : bool, optional
+        return_dict : bool, optional
             Whether to return results as dictionaries instead of tuples. Default is False.
 
         Yields
@@ -359,12 +394,38 @@ class PostgresClient:
             return cur.fetchall()
 
     def __enter__(self) -> "PostgresClient":
-        """Context manager entry."""
+        """Context manager entry.
+
+        Establishes database connection when entering context.
+
+        Returns
+        -------
+        PostgresClient
+            The client instance for use within the context.
+        """
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Context manager exit."""
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: object | None
+    ) -> None:
+        """Context manager exit.
+
+        Closes database connection when exiting context, even if an exception occurred.
+
+        Parameters
+        ----------
+        exc_type : type or None
+            The exception type if an exception occurred, None otherwise.
+        exc_val : Exception or None
+            The exception instance if an exception occurred, None otherwise.
+        exc_tb : traceback or None
+            The traceback object if an exception occurred, None otherwise.
+
+        Returns
+        -------
+        None
+        """
         self.disconnect()
 
 
@@ -375,12 +436,7 @@ class PostgresSparkReader:
     This class provides functionality to read data from PostgreSQL tables
     into Spark DataFrames using JDBC connections.
 
-    Parameters
-    ----------
-    spark : SparkSession
-        Active Spark session.
-    config : PostgresConfig
-        PostgreSQL connection configuration.
+
 
     Attributes
     ----------
@@ -388,6 +444,18 @@ class PostgresSparkReader:
         The Spark session used for operations.
     config : PostgresConfig
         PostgreSQL connection configuration.
+
+
+    Methods
+    -------
+    read_table
+        Read a table from PostgreSQL into a Spark DataFrame.
+    read_sql
+        Execute a SQL query on PostgreSQL and return results as a Spark DataFrame.
+    read_partitioned
+        Read a table with partitioning for parallel data loading.
+    schema
+        Get the schema of a PostgreSQL table.
 
     Examples
     --------
