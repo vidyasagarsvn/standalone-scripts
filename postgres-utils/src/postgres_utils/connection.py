@@ -179,7 +179,7 @@ class PostgresClient:
                 f"Connected to PostgreSQL database '{self.config.database}' on {self.config.host}:{self.config.port}"
             )
         except (psycopg2.OperationalError, psycopg2.DatabaseError) as e:
-            logger.error(f"Failed to connect to PostgreSQL: {e}", exc_info=True)
+            logger.exception(f"Failed to connect to PostgreSQL: {e}")
             raise
 
     def disconnect(self) -> None:
@@ -195,7 +195,7 @@ class PostgresClient:
                 self._connected = False
                 logger.info("Disconnected from PostgreSQL database")
             except psycopg2.DatabaseError as e:
-                logger.warning(f"Database error during disconnect: {e}", exc_info=True)
+                logger.exception(f"Database error during disconnect: {e}")
                 raise
 
     @contextmanager
@@ -245,7 +245,7 @@ class PostgresClient:
                 cursor = connection.cursor()
             yield cursor
         except psycopg2.DatabaseError as e:
-            logger.error(f"Database error during cursor operation: {e}", exc_info=True)
+            logger.exception(f"Database error during cursor operation: {e}")
             raise
         finally:
             if cursor:
@@ -460,8 +460,7 @@ class PostgresSparkReader:
             logger.info(f"Successfully read table '{table}' from PostgreSQL")
             return df
         except (Py4JJavaError, psycopg2.DatabaseError) as e:
-            error_msg = f"Failed to read table '{table}' from PostgreSQL: {e}"
-            logger.error(error_msg, exc_info=True)
+            logger.exception(f"Failed to read table '{table}' from PostgreSQL: {e}")
             raise
 
     def read_sql(self, query: str, **options: Any) -> Any:
@@ -504,8 +503,7 @@ class PostgresSparkReader:
             logger.info("Successfully executed SQL query and loaded into Spark DataFrame")
             return df
         except (Py4JJavaError, psycopg2.DatabaseError) as e:
-            error_msg = f"Failed to execute SQL query: {e}"
-            logger.error(error_msg, exc_info=True)
+            logger.exception(f"Failed to execute SQL query: {e}")
             raise
 
     def read_partitioned(
@@ -577,8 +575,7 @@ class PostgresSparkReader:
             logger.info(f"Successfully read partitioned table '{table}' with {num_partitions} partitions")
             return df
         except (Py4JJavaError, psycopg2.DatabaseError) as e:
-            error_msg = f"Failed to read partitioned table '{table}': {e}"
-            logger.error(error_msg, exc_info=True)
+            logger.exception(f"Failed to read partitioned table '{table}': {e}")
             raise
 
     def schema(self, table: str) -> Any:
@@ -610,6 +607,5 @@ class PostgresSparkReader:
             logger.info(f"Retrieved schema for table '{table}'")
             return df.schema
         except (Py4JJavaError, psycopg2.DatabaseError) as e:
-            error_msg = f"Failed to get schema for table '{table}': {e}"
-            logger.error(error_msg, exc_info=True)
+            logger.exception(f"Failed to get schema for table '{table}': {e}")
             raise
