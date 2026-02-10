@@ -295,7 +295,7 @@ class PostgresClient:
         >>> for row in results:
         ...     print(row)
         """
-        with self.cursor(dict_cursor=False) as cur:
+        with self.cursor(return_dict=False) as cur:
             cur.execute(query, params)
             return cur.fetchall()
 
@@ -328,7 +328,7 @@ class PostgresClient:
         --------
         >>> user = db.execute_single("SELECT * FROM users WHERE id = %s", (1,))
         """
-        with self.cursor(dict_cursor=False) as cur:
+        with self.cursor(return_dict=False) as cur:
             cur.execute(query, params)
             return cur.fetchone()
 
@@ -363,7 +363,7 @@ class PostgresClient:
         >>> for user in users:
         ...     print(user['name'])
         """
-        with self.cursor(dict_cursor=True) as cur:
+        with self.cursor(return_dict=True) as cur:
             cur.execute(query, params)
             return cur.fetchall()
 
