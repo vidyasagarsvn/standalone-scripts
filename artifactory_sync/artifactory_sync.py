@@ -269,7 +269,7 @@ class ArtifactoryClient:
                 click.echo(f'[UPLOAD] File size: {file_size} bytes')
             
             with open(local_path, 'rb') as f:
-                response = self._retry_request('PUT', url, data=f, timeout=self.timeout)
+                _ = self._retry_request('PUT', url, data=f, timeout=self.timeout)
             
             if verbose:
                 click.echo(f'[UPLOAD] Successfully uploaded: {artifact_path}')
@@ -405,12 +405,12 @@ class JFrogCLIClient:
             results = data.get('results', [])
             
             if verbose:
-                click.echo(f'[JFROG] Found {len(results)} items')
+                click.echo('[JFROG] Found {len(results)} items')
             
             return results
         except json.JSONDecodeError:
             if verbose:
-                click.echo(f'[JFROG] No artifacts found or empty result')
+                click.echo('[JFROG] No artifacts found or empty result')
             return []
     
     def download_file(self, repo: str, artifact_path: str, local_path: Path, verbose: bool = False) -> bool:

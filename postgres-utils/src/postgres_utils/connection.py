@@ -2,7 +2,7 @@ import logging
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Generator, Optional
+from typing import Any, Generator
 
 import psycopg2
 from psycopg2 import extras
@@ -36,11 +36,11 @@ class PostgresConfig:
 
     Methods
     -------
-    jdbc_url
+    jdbc_url(self) -> str
         Generate JDBC URL for PostgreSQL connection.
-    jdbc_properties
+    jdbc_properties(self) -> dict[str, str]
         Generate JDBC connection properties.
-    psycopg2_dsn
+    psycopg2_dsn(self) -> str
         Generate psycopg2 DSN (Data Source Name) for connections.
 
     Raises
@@ -125,17 +125,17 @@ class PostgresClient:
 
     Methods
     -------
-    connect
+    connect(self) -> None
         Establish a connection pool to the PostgreSQL database.
-    disconnect
+    disconnect(self) -> None
         Close all connections in the pool.
-    cursor
+    cursor(self, return_dict: bool = False) -> Generator[psycopg2.extensions.cursor, None, None]
         Context manager for database cursor operations.
-    execute
+    execute(self, query: str, params: tuple[Any, ...] | list[Any] | None = None) -> list[tuple[Any, ...]]
         Execute a read-only query and return results.
-    execute_single
+    execute_single(self, query: str, params: tuple[Any, ...] | list[Any] | None = None) -> tuple[Any, ...] | None
         Execute a read-only query and return the first result.
-    execute_dict
+    execute_dict(self, query: str, params: tuple[Any, ...] | list[Any] | None = None) -> list[dict[str, Any]]
         Execute a read-only query and return results as dictionaries.
 
     Examples
@@ -448,13 +448,13 @@ class PostgresSparkReader:
 
     Methods
     -------
-    read_table
+    read_table(self, table: str, **options: Any) -> Any
         Read a table from PostgreSQL into a Spark DataFrame.
-    read_sql
+    read_sql(self, query: str, **options: Any) -> Any
         Execute a SQL query on PostgreSQL and return results as a Spark DataFrame.
-    read_partitioned
+    read_partitioned(self, table: str, partition_column: str, num_partitions: int = 4, lower_bound: int | None = None, upper_bound: int | None = None, **options: Any) -> DataFrame
         Read a table with partitioning for parallel data loading.
-    schema
+    schema(self, table: str) -> Any
         Get the schema of a PostgreSQL table.
 
     Examples
