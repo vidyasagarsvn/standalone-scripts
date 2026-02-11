@@ -1,8 +1,11 @@
 
 import os
 from unittest.mock import MagicMock
+
 import pytest
-from postgres_utils.connection import PostgresConfig, PostgresClient, PostgresSparkReader
+
+from postgres_utils.connection import PostgresClient, PostgresConfig, PostgresSparkReader
+
 
 class TestPostgresUtils:
     """

@@ -7,7 +7,6 @@ from typing import Any, Generator
 import psycopg2
 from psycopg2 import extras
 from psycopg2.pool import SimpleConnectionPool
-from py4j.protocol import Py4JJavaError
 from pyspark.sql import DataFrame, SparkSession
 
 logger = logging.getLogger(__name__)
