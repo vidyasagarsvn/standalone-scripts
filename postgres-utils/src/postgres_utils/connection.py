@@ -83,19 +83,43 @@ class PostgresConfig:
         if not self.password:
             raise ValueError("password must be provided or POSTGRES_PASSWORD environment variable must be set")
 
+
     @property
     def jdbc_url(self) -> str:
-        """Generate JDBC URL for PostgreSQL connection."""
+        """
+        Generate JDBC URL for PostgreSQL connection.
+
+        Returns
+        -------
+        str
+            The JDBC URL string for connecting to the PostgreSQL database.
+        """
         return f"jdbc:postgresql://{self.host}:{self.port}/{self.database}"
+
 
     @property
     def jdbc_properties(self) -> dict[str, str]:
-        """Generate JDBC connection properties."""
+        """
+        Generate JDBC connection properties.
+
+        Returns
+        -------
+        dict[str, str]
+            Dictionary containing the user and password for JDBC connection.
+        """
         return {"user": self.user, "password": self.password}
+
 
     @property
     def psycopg2_dsn(self) -> str:
-        """Generate psycopg2 DSN (Data Source Name) for connections."""
+        """
+        Generate psycopg2 DSN (Data Source Name) for connections.
+
+        Returns
+        -------
+        str
+            The DSN string for connecting to the PostgreSQL database using psycopg2.
+        """
         return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
 
 
@@ -117,10 +141,6 @@ class PostgresClient:
         Minimum number of connections to maintain in the pool.
     max_connections : int
         Maximum number of connections allowed in the pool.
-    _pool : SimpleConnectionPool or None
-        The underlying psycopg2 connection pool.
-    _connected : bool
-        Whether the client is currently connected.
 
 
     Methods
@@ -529,7 +549,7 @@ class PostgresSparkReader:
             )
             logger.info(f"Successfully read table '{table}' from PostgreSQL")
             return df
-        except (Py4JJavaError, psycopg2.DatabaseError) as e:
+        except Exception as e:
             logger.exception(f"Failed to read table '{table}' from PostgreSQL: {e}")
             raise
 
@@ -572,7 +592,7 @@ class PostgresSparkReader:
             )
             logger.info("Successfully executed SQL query and loaded into Spark DataFrame")
             return df
-        except (Py4JJavaError, psycopg2.DatabaseError) as e:
+        except Exception as e:
             logger.exception(f"Failed to execute SQL query: {e}")
             raise
 
@@ -644,7 +664,7 @@ class PostgresSparkReader:
             )
             logger.info(f"Successfully read partitioned table '{table}' with {num_partitions} partitions")
             return df
-        except (Py4JJavaError, psycopg2.DatabaseError) as e:
+        except Exception as e:
             logger.exception(f"Failed to read partitioned table '{table}': {e}")
             raise
 
@@ -676,6 +696,6 @@ class PostgresSparkReader:
             df = self.read_table(table, numPartitions=1)
             logger.info(f"Retrieved schema for table '{table}'")
             return df.schema
-        except (Py4JJavaError, psycopg2.DatabaseError) as e:
+        except Exception as e:
             logger.exception(f"Failed to get schema for table '{table}': {e}")
             raise
