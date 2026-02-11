@@ -1,54 +1,76 @@
+
 import os
-
+from unittest.mock import MagicMock
 import pytest
+from postgres_utils.connection import PostgresConfig, PostgresClient, PostgresSparkReader
 
-from postgres_utils.connection import PostgresClient, PostgresConfig
+class TestPostgresUtils:
+    def setup_method(self):
+        os.environ["POSTGRES_USER"] = "postgres"
+        os.environ["POSTGRES_PASSWORD"] = "password"
+        self.config = PostgresConfig(host="localhost", database="testdb", port=5432)
+        self.spark = MagicMock()
+        self.reader = PostgresSparkReader(self.spark, self.config)
+        self.client = PostgresClient(self.config)
 
+    def test_postgres_config_env(self, monkeypatch):
+        monkeypatch.setenv("POSTGRES_USER", "envuser")
+        monkeypatch.setenv("POSTGRES_PASSWORD", "envpass")
+        cfg = PostgresConfig(host="localhost", database="testdb")
+        assert cfg.user == "envuser"
+        assert cfg.password == "envpass"
+        assert cfg.jdbc_url.startswith("jdbc:postgresql://")
+        assert "localhost" in cfg.jdbc_url
+        assert cfg.psycopg2_dsn.startswith("postgresql://")
 
-@pytest.fixture
-def config() -> PostgresConfig:
-    """Fixture for PostgresConfig with environment variables set."""
-    os.environ["POSTGRES_USER"] = "postgres"
-    os.environ["POSTGRES_PASSWORD"] = "password"
-    return PostgresConfig(host="localhost", database="testdb", port=5432)
+    def test_postgres_config_missing_user(self, monkeypatch):
+        monkeypatch.delenv("POSTGRES_USER", raising=False)
+        monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
+        with pytest.raises(ValueError):
+            PostgresConfig(host="localhost", database="testdb")
 
+    def test_postgres_client_connect_disconnect(self):
+        assert self.client._connected is False
+        # Don't actually connect to DB in unit test
 
-def test_postgres_config_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test PostgresConfig reads credentials from environment variables."""
-    monkeypatch.setenv("POSTGRES_USER", "envuser")
-    monkeypatch.setenv("POSTGRES_PASSWORD", "envpass")
-    cfg = PostgresConfig(host="localhost", database="testdb")
-    assert cfg.user == "envuser"
-    assert cfg.password == "envpass"
-    assert cfg.jdbc_url.startswith("jdbc:postgresql://")
-    assert "localhost" in cfg.jdbc_url
-    assert cfg.psycopg2_dsn.startswith("postgresql://")
+    def test_postgres_client_context_manager(self):
+        try:
+            self.client.__enter__()
+            self.client.__exit__(None, None, None)
+        except Exception:
+            pass
 
+    def test_spark_reader_init(self):
+        assert self.reader.spark is self.spark
+        assert self.reader.config is self.config
 
-def test_postgres_config_missing_user(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test PostgresConfig raises ValueError if user/password missing."""
-    monkeypatch.delenv("POSTGRES_USER", raising=False)
-    monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
-    with pytest.raises(ValueError):
-        PostgresConfig(host="localhost", database="testdb")
+    def test_spark_reader_read_table_calls_jdbc(self):
+        self.reader.spark.read.jdbc.return_value = "mock_df"
+        df = self.reader.read_table("users")
+        assert df == "mock_df"
+        self.reader.spark.read.jdbc.assert_called_once()
 
+    def test_spark_reader_read_sql_calls_jdbc(self):
+        self.reader.spark.read.jdbc.return_value = "mock_df"
+        df = self.reader.read_sql("SELECT * FROM users")
+        assert df == "mock_df"
+        self.reader.spark.read.jdbc.assert_called_once()
 
-def test_postgres_client_connect_disconnect(config: PostgresConfig) -> None:
-    """Test PostgresClient connect/disconnect logic without real DB."""
-    client = PostgresClient(config)
-    # Should not raise, even if DB is not running (will raise on connect)
-    assert client._connected is False
-    # Don't actually connect to DB in unit test
-    # client.connect()  # Would raise if DB is not available
-    # client.disconnect()  # Should be safe to call
+    def test_spark_reader_read_partitioned_calls_jdbc(self):
+        self.reader.spark.read.jdbc.return_value = "mock_df"
+        df = self.reader.read_partitioned(
+            table="users",
+            partition_column="id",
+            num_partitions=2,
+            lower_bound=1,
+            upper_bound=10,
+        )
+        assert df == "mock_df"
+        self.reader.spark.read.jdbc.assert_called_once()
 
-
-def test_postgres_client_context_manager(config: PostgresConfig) -> None:
-    """Test PostgresClient context manager entry/exit without real DB."""
-    client = PostgresClient(config)
-    # Should be able to enter/exit context without DB
-    try:
-        client.__enter__()
-        client.__exit__(None, None, None)
-    except Exception:
-        pass  # Acceptable if DB is not running
+    def test_spark_reader_schema_returns_schema(self):
+        mock_df = MagicMock()
+        mock_df.schema = "mock_schema"
+        self.spark.read.jdbc.return_value = mock_df
+        schema = self.reader.schema("users")
+        assert schema == "mock_schema"
