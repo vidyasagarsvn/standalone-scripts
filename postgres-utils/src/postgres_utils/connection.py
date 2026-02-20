@@ -130,8 +130,6 @@ class PostgresClient:
     execute queries, and manage connections with automatic pooling and error handling.
     Connections are lazy-loaded on first use.
 
-
-
     Attributes
     ----------
     config : PostgresConfig
@@ -140,7 +138,6 @@ class PostgresClient:
         Minimum number of connections to maintain in the pool.
     max_connections : int
         Maximum number of connections allowed in the pool.
-
 
     Methods
     -------
@@ -165,7 +162,6 @@ class PostgresClient:
     ...     cur.execute("SELECT * FROM users WHERE id = %s", (1,))
     ...     result = cur.fetchone()
     """
-
     def __init__(
         self,
         config: PostgresConfig,
@@ -248,6 +244,7 @@ class PostgresClient:
         if self._pool:
             try:
                 self._pool.closeall()
+                self._pool = None
                 self._connected = False
                 logger.info("Disconnected from PostgreSQL database")
             except psycopg2.DatabaseError as e:
@@ -446,6 +443,17 @@ class PostgresClient:
         None
         """
         self.disconnect()
+
+    def __del__(self):
+        """
+        Destructor to ensure connections are closed if not already cleaned up.
+        Note: Relying on __del__ is not always reliable; explicit cleanup is preferred.
+        """
+        try:
+            self.disconnect()
+        except Exception:
+            # Suppress all exceptions in destructor
+            pass
 
 
 class PostgresSparkReader:
